@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -19,9 +20,10 @@ class PDFAgent:
         metadata = self._get_metadata(file_path)
         pages_md = []
 
+        doc_stem = file_path.stem
         with fitz.open(str(file_path)) as doc, pdfplumber.open(str(file_path)) as plumber:
             for page_num, (fitz_page, plumber_page) in enumerate(zip(doc, plumber.pages), start=1):
-                pages_md.append(self._process_page(fitz_page, plumber_page, page_num, metadata["title"], doc))
+                pages_md.append(self._process_page(fitz_page, plumber_page, page_num, metadata["title"], doc, doc_stem))
 
         header = f"# {metadata['title']}\n"
         if metadata.get("author"):
@@ -30,29 +32,50 @@ class PDFAgent:
 
         return {"markdown": header + "\n\n".join(pages_md), "metadata": metadata}
 
-    def _process_page(self, fitz_page, plumber_page, page_num, doc_title, doc) -> str:
+    # matches figure captions at start of line: "Figure 1:", "Fig. 2:" etc.
+    # does NOT match inline references like "(see Fig.2)"
+    _FIGURE_RE = re.compile(r"^fig(ure)?\.?\s*\d+\s*:", re.IGNORECASE | re.MULTILINE)
+
+    def _process_page(self, fitz_page, plumber_page, page_num, doc_title, doc, doc_stem) -> str:
         parts = [f"## Page {page_num}\n"]
 
         text = fitz_page.get_text("text").strip()
+        text = re.sub(r"([a-z])-\n([a-z])", r"\1\2", text)
         if text:
             parts.append(text)
 
         for table in plumber_page.extract_tables() or []:
             parts.append(self._table_to_markdown(table))
 
-        for i, img_ref in enumerate(fitz_page.get_images(full=True)):
+        # try embedded raster images first
+        raster_images = fitz_page.get_images(full=True)
+        for i, img_ref in enumerate(raster_images):
             xref = img_ref[0]
             try:
-                parts.append(self._extract_image(doc, xref, page_num, i, doc_title))
+                parts.append(self._extract_raster_image(doc, xref, page_num, i, doc_title, doc_stem))
             except Exception as e:
                 logger.warning("page %d image %d failed: %s", page_num, i, e)
 
+        # if no raster images but the page mentions a figure, render the whole page
+        if not raster_images and self._FIGURE_RE.search(text):
+            try:
+                parts.append(self._render_page_as_image(fitz_page, page_num, doc_title, doc_stem))
+            except Exception as e:
+                logger.warning("page %d render failed: %s", page_num, e)
+
         return "\n\n".join(parts)
 
-    def _extract_image(self, doc, xref, page_num, img_index, doc_title) -> str:
+    def _extract_raster_image(self, doc, xref, page_num, img_index, doc_title, doc_stem) -> str:
         raw = doc.extract_image(xref)
-        img_path = self.images_dir / f"p{page_num}_img{img_index}.{raw['ext']}"
+        img_path = self.images_dir / f"{doc_stem}_p{page_num}_img{img_index}.{raw['ext']}"
         img_path.write_bytes(raw["image"])
+        return self.image_agent.describe(img_path, f"a PDF titled '{doc_title}' (page {page_num})")
+
+    def _render_page_as_image(self, fitz_page, page_num, doc_title, doc_stem) -> str:
+        # render at 2x resolution so text in diagrams is legible to Claude Vision
+        pixmap = fitz_page.get_pixmap(dpi=150)
+        img_path = self.images_dir / f"{doc_stem}_p{page_num}_render.png"
+        pixmap.save(str(img_path))
         return self.image_agent.describe(img_path, f"a PDF titled '{doc_title}' (page {page_num})")
 
     def _get_metadata(self, file_path: Path) -> dict:

@@ -1,0 +1,70 @@
+# Evaluation question bank
+# Each question has a query and the filename of the document that should be retrieved.
+# Add more questions as you index more documents.
+
+questions:
+  # discussion.pdf — ML Fashion Recommendation System project
+  - query: "How does the outfit recommendation system work?"
+    expected_source: "discussion.pdf"
+
+  - query: "What is ResNet-50 used for in the project?"
+    expected_source: "discussion.pdf"
+
+  - query: "How is FAISS used for similarity search?"
+    expected_source: "discussion.pdf"
+
+  - query: "What database stores the clothing embeddings?"
+    expected_source: "discussion.pdf"
+
+  - query: "How is the application deployed and containerized?"
+    expected_source: "discussion.pdf"
+
+  - query: "What monitoring tools are used in production?"
+    expected_source: "discussion.pdf"
+
+  - query: "How are clothing images classified into categories?"
+    expected_source: "discussion.pdf"
+
+  - query: "What frontend framework is used for wardrobe management?"
+    expected_source: "discussion.pdf"
+
+  # CoverLetter_SamsungIntern.pdf — Samsung Bixby Edge AI internship cover letter
+  - query: "What internship is the cover letter applying for?"
+    expected_source: "CoverLetter_SamsungIntern.pdf"
+
+  - query: "What RAG system was built end to end?"
+    expected_source: "CoverLetter_SamsungIntern.pdf"
+
+  - query: "What university does the applicant attend?"
+    expected_source: "CoverLetter_SamsungIntern.pdf"
+
+  - query: "What challenge does on-device AI face compared to cloud AI?"
+    expected_source: "CoverLetter_SamsungIntern.pdf"
+
+  - query: "What orchestration framework was used for agentic workflows?"
+    expected_source: "CoverLetter_SamsungIntern.pdf"
+
+  # test_RP1.pdf — "A Systematic Survey of Prompt Engineering in LLMs" (Sahoo et al., 2024)
+  - query: "What is chain-of-thought prompting and how does it improve reasoning?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "How does Tree-of-Thoughts differ from Chain-of-Thought prompting?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "What is Retrieval Augmented Generation and how does it reduce hallucinations?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "What is zero-shot prompting in large language models?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "How does Self-Consistency improve chain-of-thought reasoning?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "What is Automatic Prompt Engineer APE?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "How does ReAct combine reasoning and action in language models?"
+    expected_source: "test_RP1.pdf"
+
+  - query: "What is few-shot prompting and when is it used?"
+    expected_source: "test_RP1.pdf"

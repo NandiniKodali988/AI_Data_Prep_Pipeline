@@ -33,11 +33,33 @@ def main() -> None:
     parser.add_argument(
         "--search", "-s", help="Run a search query against the indexed documents"
     )
-    parser.add_argument("--top-k", type=int, default=5, help="Number of results for --search")
+    parser.add_argument(
+        "--query", "-q", help="Ask a question — retrieves relevant chunks and generates a grounded answer"
+    )
+    parser.add_argument("--top-k", type=int, default=5, help="Number of results for --search / --query")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
     setup_logging(args.verbose)
+
+    if args.query:
+        from src.agents.indexing_agent import IndexingAgent
+        from src.agents.rag_agent import RAGAgent
+
+        indexing_agent = IndexingAgent(chroma_db_path=args.chroma_db)
+        rag_agent = RAGAgent()
+
+        chunks = indexing_agent.search(args.query, top_k=args.top_k)
+        if not chunks:
+            print("No relevant documents found in the index.")
+            return
+
+        result = rag_agent.answer(args.query, chunks)
+
+        print(f"\nQuestion: {args.query}\n")
+        print(f"Answer:\n{result['answer']}")
+        print(f"\nSources ({result['chunks_used']} chunks): {', '.join(result['sources'])}")
+        return
 
     if args.search:
         # Search-only mode — skip processing

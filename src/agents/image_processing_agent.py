@@ -43,7 +43,8 @@ class ImageProcessingAgent:
         )
 
         description = resp.content[0].text.strip()
-        return f"![{image_path.name}]({image_path})\n\n> **Image description:** {description}\n"
+        # always use a path relative to the output dir — images/ is always next to the .md
+        return f"![{image_path.name}](images/{image_path.name})\n\n> **Image description:** {description}\n"
 
     def _media_type(self, image_path: Path) -> str:
         ext = image_path.suffix.lower()
