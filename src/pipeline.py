@@ -9,6 +9,7 @@ from src.agents.format_detection_agent import FileFormat, FormatDetectionAgent
 from src.agents.image_processing_agent import ImageProcessingAgent
 from src.agents.indexing_agent import IndexingAgent
 from src.agents.metadata_agent import MetadataAgent
+from src.agents.office_agent import DocxAgent, PptxAgent, XlsxAgent
 from src.agents.pdf_agent import PDFAgent
 from src.agents.structured_data_agent import StructuredDataAgent
 from src.agents.text_agent import TextAgent
@@ -28,6 +29,9 @@ class Pipeline:
         self.format_agent = FormatDetectionAgent()
         self.image_agent = ImageProcessingAgent(client=client)
         self.pdf_agent = PDFAgent(image_agent=self.image_agent, images_dir=images_dir)
+        self.docx_agent = DocxAgent(image_agent=self.image_agent, images_dir=images_dir)
+        self.pptx_agent = PptxAgent(image_agent=self.image_agent, images_dir=images_dir)
+        self.xlsx_agent = XlsxAgent()
         self.text_agent = TextAgent()
         self.structured_agent = StructuredDataAgent()
         self.metadata_agent = MetadataAgent()
@@ -78,6 +82,12 @@ class Pipeline:
     def _process_file(self, file_path: Path, fmt: FileFormat) -> dict | None:
         if fmt == FileFormat.PDF:
             result = self.pdf_agent.process(file_path)
+        elif fmt == FileFormat.DOCX:
+            result = self.docx_agent.process(file_path)
+        elif fmt == FileFormat.PPTX:
+            result = self.pptx_agent.process(file_path)
+        elif fmt == FileFormat.XLSX:
+            result = self.xlsx_agent.process(file_path)
         elif fmt in (FileFormat.TEXT, FileFormat.MARKDOWN):
             result = self.text_agent.process(file_path)
         elif fmt in (FileFormat.JSON, FileFormat.YAML):
