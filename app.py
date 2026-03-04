@@ -16,6 +16,8 @@ st.set_page_config(
 ACCEPTED_EXTENSIONS = ["pdf", "docx", "pptx", "xlsx", "txt", "md", "json", "yaml", "png", "jpg", "jpeg"]
 
 
+# cache_resource keeps these alive across reruns so we don't reinitialize
+# the Anthropic client and ChromaDB connection on every interaction
 @st.cache_resource(show_spinner="Starting up...")
 def get_pipeline():
     from src.pipeline import Pipeline
@@ -46,6 +48,8 @@ with st.sidebar:
     st.metric("Chunks indexed", total_chunks)
 
     if total_chunks > 0:
+        # pull all metadata just to get the unique filenames — not ideal at scale
+        # but fine for a local collection of a few dozen docs
         raw = index_agent.collection.get(include=["metadatas"])
         filenames = sorted(
             set(m.get("filename", Path(m.get("source_file", "")).name) for m in raw["metadatas"])
@@ -72,6 +76,8 @@ with tab_upload:
         st.caption(f"{uploaded.name} — {len(uploaded.getvalue()) / 1024:.1f} KB")
 
         if st.button("Index", type="primary"):
+            # streamlit gives us an in-memory buffer, so write it to a temp file first
+            # the pipeline expects a real Path on disk
             with tempfile.TemporaryDirectory() as tmp_dir:
                 tmp_path = Path(tmp_dir) / uploaded.name
                 tmp_path.write_bytes(uploaded.getvalue())
@@ -83,7 +89,7 @@ with tab_upload:
                             st.warning("Couldn't process this file — format may not be supported.")
                         else:
                             st.success(f"{uploaded.name} indexed ({result['chunks']} chunks)")
-                            st.rerun()
+                            st.rerun()  # refresh the sidebar chunk count
                     except Exception as e:
                         st.error(str(e))
 
@@ -108,6 +114,8 @@ with tab_qa:
                 st.markdown(result["answer"])
                 st.caption(f"Sources: {', '.join(result['sources'])}")
 
+                # cosine distance is 0 (identical) to 2 (opposite), so 1 - distance gives
+                # a more intuitive similarity score
                 with st.expander("Show sources"):
                     for i, chunk in enumerate(chunks, 1):
                         meta = chunk["metadata"]

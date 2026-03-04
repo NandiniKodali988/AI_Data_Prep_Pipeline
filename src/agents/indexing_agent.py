@@ -6,6 +6,7 @@ import chromadb
 logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "documents"
+# skip anything shorter than this — usually stray headers or page numbers
 MIN_CHUNK_CHARS = 50
 
 
@@ -30,6 +31,7 @@ class IndexingAgent:
             if len(text.strip()) < MIN_CHUNK_CHARS:
                 continue
 
+            # deterministic ID so re-indexing the same file is a no-op (upsert)
             chunk_id = hashlib.sha256(
                 f"{meta.get('source_file', '')}::{meta.get('chunk_index', 0)}".encode()
             ).hexdigest()[:32]

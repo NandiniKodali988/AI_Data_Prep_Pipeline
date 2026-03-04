@@ -40,6 +40,7 @@ class PDFAgent:
         parts = [f"## Page {page_num}\n"]
 
         text = fitz_page.get_text("text").strip()
+        # PDFs often hyphenate words across lines — rejoin them before indexing
         text = re.sub(r"([a-z])-\n([a-z])", r"\1\2", text)
         if text:
             parts.append(text)

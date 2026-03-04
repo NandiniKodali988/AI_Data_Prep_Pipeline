@@ -41,6 +41,7 @@ class ChunkingAgent:
             end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown)
             sections.append((match.group(0), markdown[start:end].strip()))
 
+        # content before the first heading (title, abstract, etc.) gets its own unnamed section
         preamble = markdown[: matches[0].start()].strip()
         if preamble:
             sections.insert(0, ("", preamble))
@@ -55,6 +56,8 @@ class ChunkingAgent:
         for p in paragraphs:
             flat.extend(self._split_by_words(p) if len(p) > self.max_chunk_chars else [p])
 
+        # carry a tail of the previous chunk into the next one so retrieval
+        # doesn't miss answers that straddle a chunk boundary
         chunks, current, overlap_buf = [], "", ""
         for para in flat:
             candidate = f"{overlap_buf}\n\n{para}".strip() if overlap_buf else para
@@ -77,6 +80,7 @@ class ChunkingAgent:
         for word in words:
             if current_len + len(word) + 1 > self.max_chunk_chars and current_words:
                 chunks.append(" ".join(current_words))
+                # build overlap by walking backwards through the words we just flushed
                 overlap_words, overlap_len = [], 0
                 for w in reversed(current_words):
                     if overlap_len + len(w) + 1 > self.overlap_chars:

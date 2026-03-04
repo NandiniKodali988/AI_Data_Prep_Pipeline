@@ -32,7 +32,8 @@ class DocxAgent:
 
         parts = [header]
 
-        # Iterate paragraphs and tables in document order via the XML body
+        # doc.paragraphs and doc.tables are separate lists that lose interleaving order,
+        # so we walk the raw XML body to get paragraphs and tables in the right sequence
         for child in doc.element.body:
             tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
             if tag == "p":
@@ -46,7 +47,8 @@ class DocxAgent:
                 if md:
                     parts.append(md)
 
-        # Embedded images (position within doc is not easily recoverable, append at end)
+        # images live in the relationship graph, not inline in the paragraph stream,
+        # so there's no reliable way to recover their original position — append at end
         img_count = 0
         for rel in doc.part.rels.values():
             if "image" not in rel.reltype:
@@ -94,8 +96,9 @@ class DocxAgent:
         def cell_text(cell):
             return cell.text.replace("\n", " ").strip()
 
+        # merged cells share the same underlying _tc XML element; dedup by object identity
+        # so we don't output the same content twice across merged columns
         header = [cell_text(c) for c in rows[0].cells]
-        # Deduplicate merged cells (python-docx repeats the first cell value)
         seen_ids = set()
         unique_header = []
         for i, c in enumerate(rows[0].cells):

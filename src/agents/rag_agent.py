@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
+# strict grounding — we don't want Claude using its parametric knowledge here,
+# only what came back from the vector search
 SYSTEM_PROMPT = (
     "You are a helpful assistant that answers questions strictly based on the provided "
     "document excerpts. Each excerpt is labelled with a [number] and its source filename. "
@@ -53,6 +55,7 @@ class RAGAgent:
 
         answer_text = response.content[0].text
 
+        # collect unique source filenames in the order they were retrieved
         seen: set[str] = set()
         sources: list[str] = []
         for chunk in chunks:
