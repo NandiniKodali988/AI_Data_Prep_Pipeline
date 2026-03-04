@@ -79,6 +79,26 @@ class Pipeline:
             "files": processed_files,
         }
 
+    def process_single(self, file_path: Path) -> dict | None:
+        """Process and index one file. Returns {chunks, format} or None if skipped/failed."""
+        fmt = self.format_agent.detect(file_path)
+        if fmt == FileFormat.UNKNOWN:
+            logger.info("skipping %s (unsupported format)", file_path.name)
+            return None
+        try:
+            result = self._process_file(file_path, fmt)
+            if result is None:
+                return None
+            out_path = self.output_dir / (file_path.stem + ".md")
+            out_path.write_text(result["markdown"], encoding="utf-8")
+            chunks = self.chunking_agent.chunk(result["markdown"], result["metadata"])
+            n = self.indexing_agent.index(chunks)
+            logger.info("indexed %d chunks from %s", n, file_path.name)
+            return {"chunks": n, "format": fmt.value}
+        except Exception as e:
+            logger.error("%s failed: %s", file_path.name, e, exc_info=True)
+            raise
+
     def _process_file(self, file_path: Path, fmt: FileFormat) -> dict | None:
         if fmt == FileFormat.PDF:
             result = self.pdf_agent.process(file_path)
