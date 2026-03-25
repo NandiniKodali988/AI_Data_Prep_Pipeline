@@ -19,6 +19,6 @@ COPY main.py ./
 
 EXPOSE 7860
 
-HEALTHCHECK CMD curl --fail http://localhost:7860/_stcore/health
+HEALTHCHECK --interval=10s --timeout=10s --start-period=30s --retries=5 CMD curl --fail http://localhost:7860/_stcore/health
 
 ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=7860", "--server.address=0.0.0.0"]
