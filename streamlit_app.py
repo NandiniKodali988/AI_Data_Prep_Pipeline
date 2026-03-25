@@ -36,9 +36,15 @@ def get_index():
     return IndexingAgent(chroma_db_path="./chroma_db")
 
 
-pipeline = get_pipeline()
-rag = get_rag()
-index_agent = get_index()
+try:
+    pipeline = get_pipeline()
+    rag = get_rag()
+    index_agent = get_index()
+except Exception as e:
+    st.error(f"Startup failed: {e}")
+    import traceback
+    st.code(traceback.format_exc())
+    st.stop()
 
 with st.sidebar:
     st.header("DocPipe")
