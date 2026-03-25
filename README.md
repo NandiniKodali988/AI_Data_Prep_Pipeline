@@ -1,3 +1,12 @@
+---
+title: DocPipe
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_file: streamlit_app.py
+pinned: false
+---
+
 # DocPipe
 
 A local RAG pipeline that ingests documents in various formats, converts them to clean Markdown, indexes the content into ChromaDB, and lets you ask questions against the full corpus. Images and diagrams get described by Claude Vision so they're searchable too.
