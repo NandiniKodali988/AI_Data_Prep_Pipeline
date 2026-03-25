@@ -44,6 +44,22 @@ questions:
   - query: "What orchestration framework was used for agentic workflows?"
     expected_source: "CoverLetter_SamsungIntern.pdf"
 
+  # presentation.pptx — TIME-LLM: Time Series Forecasting by Reprogramming Large Language Models
+  - query: "What backbone language model does TIME-LLM use?"
+    expected_source: "presentation.pptx"
+
+  - query: "What is patch reprogramming in the context of TIME-LLM?"
+    expected_source: "presentation.pptx"
+
+  - query: "What is the Prompt-as-Prefix technique used in TIME-LLM?"
+    expected_source: "presentation.pptx"
+
+  - query: "What percentage of LLaMA-7B parameters does TIME-LLM fine-tune?"
+    expected_source: "presentation.pptx"
+
+  - query: "How does TIME-LLM adapt a language model for time series forecasting?"
+    expected_source: "presentation.pptx"
+
   # test_RP1.pdf — "A Systematic Survey of Prompt Engineering in LLMs" (Sahoo et al., 2024)
   - query: "What is chain-of-thought prompting and how does it improve reasoning?"
     expected_source: "test_RP1.pdf"
