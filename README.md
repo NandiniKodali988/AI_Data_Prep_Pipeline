@@ -16,7 +16,7 @@ A local RAG pipeline that ingests documents in various formats, converts them to
 Drop a folder of PDFs, Word docs, PowerPoints, spreadsheets, or plain text files into the pipeline. It extracts the content, chunks it intelligently, and stores it in a local vector database. Then you can ask natural language questions and get grounded answers with citations pointing back to the source documents.
 
 ```
-document → format detection → content extraction → chunking → ChromaDB → RAG Q&A
+document > format detection > content extraction > chunking > ChromaDB > RAG Q&A
 ```
 
 ## Supported formats
@@ -70,12 +70,12 @@ python main.py --search "time series forecasting" --top-k 5
 
 Each file goes through a chain of agents:
 
-- **FormatDetectionAgent** — magic bytes first, extension as fallback for zip-based formats (docx/pptx/xlsx all share the same header)
-- **PDFAgent / DocxAgent / PptxAgent / XlsxAgent** — format-specific extraction
-- **ImageProcessingAgent** — sends embedded images to Claude Vision and gets back a searchable description
-- **ChunkingAgent** — splits on headings first, then paragraphs, with a small overlap window so answers that straddle chunk boundaries don't get missed
-- **IndexingAgent** — upserts into ChromaDB using a SHA256 ID derived from filename + chunk index, so re-indexing is safe
-- **RAGAgent** — formats retrieved chunks as numbered context, sends to Claude with a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
+- **FormatDetectionAgent**: magic bytes first, extension as fallback for zip-based formats (docx/pptx/xlsx all share the same header)
+- **PDFAgent / DocxAgent / PptxAgent / XlsxAgent**: format-specific extraction
+- **ImageProcessingAgent**: sends embedded images to Claude Vision and gets back a searchable description
+- **ChunkingAgent**: splits on headings first, then paragraphs, with a small overlap window so answers that straddle chunk boundaries don't get missed
+- **IndexingAgent**: upserts into ChromaDB using a SHA256 ID derived from filename + chunk index, so re-indexing is safe
+- **RAGAgent**: formats retrieved chunks as numbered context, sends to Claude with a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
 
 ## Evaluation
 
