@@ -28,6 +28,3 @@ python-dotenv>=1.0.0
 # Streamlit UI
 streamlit>=1.35.0
 
-# Testing
-pytest>=8.0.0
-pytest-cov>=5.0.0

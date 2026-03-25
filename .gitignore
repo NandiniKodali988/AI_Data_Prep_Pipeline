@@ -1,9 +1,6 @@
 # Environment & secrets
 .env
 
-# ChromaDB (local vector store — large, regenerable)
-chroma_db/
-
 # Pipeline output (regenerable)
 output/
 
