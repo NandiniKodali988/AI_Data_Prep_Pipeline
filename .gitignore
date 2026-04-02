@@ -4,6 +4,9 @@
 # Pipeline output (regenerable)
 output/
 
+# Vector database (contains indexed personal documents)
+chroma_db/
+
 # Input documents (may contain personal/private files)
 data/
 
