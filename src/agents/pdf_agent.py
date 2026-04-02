@@ -23,7 +23,11 @@ class PDFAgent:
         doc_stem = file_path.stem
         with fitz.open(str(file_path)) as doc, pdfplumber.open(str(file_path)) as plumber:
             for page_num, (fitz_page, plumber_page) in enumerate(zip(doc, plumber.pages), start=1):
-                pages_md.append(self._process_page(fitz_page, plumber_page, page_num, metadata["title"], doc, doc_stem))
+                pages_md.append(
+                    self._process_page(
+                        fitz_page, plumber_page, page_num, metadata["title"], doc, doc_stem
+                    )
+                )
 
         header = f"# {metadata['title']}\n"
         if metadata.get("author"):
@@ -53,7 +57,9 @@ class PDFAgent:
         for i, img_ref in enumerate(raster_images):
             xref = img_ref[0]
             try:
-                parts.append(self._extract_raster_image(doc, xref, page_num, i, doc_title, doc_stem))
+                parts.append(
+                    self._extract_raster_image(doc, xref, page_num, i, doc_title, doc_stem)
+                )
             except Exception as e:
                 logger.warning("page %d image %d failed: %s", page_num, i, e)
 

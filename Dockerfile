@@ -17,6 +17,8 @@ COPY chroma_db/ ./chroma_db/
 COPY streamlit_app.py ./
 COPY main.py ./
 
+RUN mkdir -p /tmp/uploads /app/output && chmod 777 /tmp/uploads /app/output
+
 EXPOSE 7860
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=30s --retries=5 CMD curl --fail http://localhost:7860/_stcore/health

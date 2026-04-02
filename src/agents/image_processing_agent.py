@@ -33,13 +33,22 @@ class ImageProcessingAgent:
         resp = self.client.messages.create(
             model=MODEL,
             max_tokens=512,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
-                    {"type": "text", "text": prompt},
-                ],
-            }],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": image_data,
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
         )
 
         description = resp.content[0].text.strip()

@@ -21,12 +21,20 @@ SYSTEM_PROMPT = (
 
 
 class RAGAgent:
-    def __init__(self, model: str = DEFAULT_MODEL):
+    def __init__(self, model: str = DEFAULT_MODEL) -> None:
         self.client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         self.model = model
 
-    def answer(self, question: str, chunks: list[dict]) -> dict:
+    def answer(
+        self,
+        question: str,
+        chunks: list[dict],
+        history: list[dict] | None = None,
+    ) -> dict[str, str | list[str] | int]:
         """Generate a grounded answer from retrieved chunks.
+
+        history is a list of prior {"role": ..., "content": ...} turns so the
+        model can handle follow-up questions that reference earlier answers.
 
         Returns:
             {
@@ -46,11 +54,16 @@ class RAGAgent:
         context = "\n\n---\n\n".join(context_parts)
         user_message = f"Document excerpts:\n\n{context}\n\n---\n\nQuestion: {question}"
 
+        # prepend prior conversation turns so follow-ups ("tell me more", "how does
+        # that compare to X?") have the context they need
+        messages = list(history) if history else []
+        messages.append({"role": "user", "content": user_message})
+
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1024,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+            messages=messages,
         )
 
         answer_text = response.content[0].text
@@ -67,3 +80,18 @@ class RAGAgent:
 
         logger.debug("RAG answer generated using %d chunks from %s", len(chunks), sources)
         return {"answer": answer_text, "sources": sources, "chunks_used": len(chunks)}
+
+    def summarize(self, markdown: str, filename: str) -> str:
+        """Return a short bullet-point summary of a document's content."""
+        # cap at 4000 chars so we don't blow the token budget on large docs
+        content = markdown[:4000]
+        prompt = (
+            f"Summarize the key points of '{filename}' in 3-5 concise bullet points. "
+            f"Base your summary only on the content below.\n\n{content}"
+        )
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=512,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text

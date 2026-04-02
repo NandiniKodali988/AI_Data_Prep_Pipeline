@@ -13,25 +13,45 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-ACCEPTED_EXTENSIONS = ["pdf", "docx", "pptx", "xlsx", "txt", "md", "json", "yaml", "png", "jpg", "jpeg"]
+ACCEPTED_EXTENSIONS = [
+    "pdf",
+    "docx",
+    "pptx",
+    "xlsx",
+    "txt",
+    "md",
+    "json",
+    "yaml",
+    "png",
+    "jpg",
+    "jpeg",
+]
 
 
 @st.cache_resource(show_spinner="Loading pipeline...")
 def get_pipeline():
     from src.pipeline import Pipeline
+
     return Pipeline(output_dir=Path("./output"), chroma_db_path="./chroma_db")
 
 
 @st.cache_resource(show_spinner=False)
 def get_rag():
     from src.agents.rag_agent import RAGAgent
+
     return RAGAgent()
 
 
 @st.cache_resource(show_spinner=False)
 def get_index():
     from src.agents.indexing_agent import IndexingAgent
+
     return IndexingAgent(chroma_db_path="./chroma_db")
+
+
+# conversation history lives in session state so it survives reruns
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 
 with st.sidebar:
@@ -56,8 +76,15 @@ with st.sidebar:
     except Exception as e:
         st.error(f"Could not connect to index: {e}")
 
+    st.divider()
+    top_k = st.slider("Results to pull", min_value=2, max_value=10, value=5)
 
-tab_upload, tab_qa = st.tabs(["Upload", "Ask"])
+    if st.button("Clear conversation"):
+        st.session_state.messages = []
+        st.rerun()
+
+
+tab_upload, tab_chat = st.tabs(["Upload", "Chat"])
 
 with tab_upload:
     st.subheader("Add a file")
@@ -84,47 +111,123 @@ with tab_upload:
                             st.warning("Couldn't process this file — format may not be supported.")
                         else:
                             st.success(f"{uploaded.name} indexed ({result['chunks']} chunks)")
+
+                            # summarize the document right after indexing so the user
+                            # gets an immediate sense of what was just added
+                            out_md = Path("./output") / (Path(uploaded.name).stem + ".md")
+                            if out_md.exists():
+                                with st.spinner("Summarizing..."):
+                                    try:
+                                        rag = get_rag()
+                                        summary = rag.summarize(
+                                            out_md.read_text(encoding="utf-8"), uploaded.name
+                                        )
+                                        st.markdown("**Summary**")
+                                        st.markdown(summary)
+                                    except Exception:
+                                        pass  # summary is best-effort; don't block on API errors
+
                             st.rerun()
                     except Exception as e:
                         st.error(str(e))
                         import traceback
+
                         st.code(traceback.format_exc())
 
-with tab_qa:
-    st.subheader("Ask")
-
+with tab_chat:
     try:
         index_agent = get_index()
+
         if index_agent.collection_size() == 0:
             st.caption("Index some documents first.")
         else:
-            question = st.text_input("Question", placeholder="What does the paper say about RAG?", label_visibility="collapsed")
-            top_k = st.slider("Results to pull", min_value=2, max_value=10, value=5)
+            # replay the conversation from session state
+            for msg in st.session_state.messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+                    if msg["role"] == "assistant" and msg.get("sources"):
+                        st.caption(f"Sources: {', '.join(msg['sources'])}")
+                        if msg.get("chunks"):
+                            with st.expander("Show sources"):
+                                for i, chunk in enumerate(msg["chunks"], 1):
+                                    meta = chunk["metadata"]
+                                    fname = meta.get(
+                                        "filename", Path(meta.get("source_file", "")).name
+                                    )
+                                    section = meta.get("section_heading", "")
+                                    st.markdown(
+                                        f"**[{i}] {fname}**" + (f" - {section}" if section else "")
+                                    )
+                                    st.caption(f"score: {1 - chunk['distance']:.3f}")
+                                    st.text(
+                                        chunk["text"][:500]
+                                        + ("..." if len(chunk["text"]) > 500 else "")
+                                    )
+                                    if i < len(msg["chunks"]):
+                                        st.divider()
 
-            if st.button("Ask", type="primary") and question:
-                with st.spinner("Thinking..."):
-                    chunks = index_agent.search(question, top_k=top_k)
+            # capture history before the new message is appended so we don't
+            # include the current question in the context we pass to Claude
+            if prompt := st.chat_input("Ask a question about your documents"):
+                history = [
+                    {"role": m["role"], "content": m["content"]}
+                    for m in st.session_state.messages
+                ]
+                st.session_state.messages.append({"role": "user", "content": prompt})
 
-                if not chunks:
-                    st.caption("Nothing relevant found.")
-                else:
-                    rag = get_rag()
-                    result = rag.answer(question, chunks)
+                with st.chat_message("user"):
+                    st.markdown(prompt)
 
-                    st.markdown(result["answer"])
-                    st.caption(f"Sources: {', '.join(result['sources'])}")
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        chunks = index_agent.search(prompt, top_k=top_k)
 
-                    with st.expander("Show sources"):
-                        for i, chunk in enumerate(chunks, 1):
-                            meta = chunk["metadata"]
-                            fname = meta.get("filename", Path(meta.get("source_file", "")).name)
-                            section = meta.get("section_heading", "")
-                            st.markdown(f"**[{i}] {fname}**" + (f" - {section}" if section else ""))
-                            st.caption(f"score: {1 - chunk['distance']:.3f}")
-                            st.text(chunk["text"][:500] + ("..." if len(chunk["text"]) > 500 else ""))
-                            if i < len(chunks):
-                                st.divider()
+                    if not chunks:
+                        response_text = "I couldn't find anything relevant in the indexed documents."
+                        st.markdown(response_text)
+                        st.session_state.messages.append(
+                            {
+                                "role": "assistant",
+                                "content": response_text,
+                                "sources": [],
+                                "chunks": [],
+                            }
+                        )
+                    else:
+                        rag = get_rag()
+                        result = rag.answer(prompt, chunks, history=history)
+                        st.markdown(result["answer"])
+                        st.caption(f"Sources: {', '.join(result['sources'])}")
+
+                        with st.expander("Show sources"):
+                            for i, chunk in enumerate(chunks, 1):
+                                meta = chunk["metadata"]
+                                fname = meta.get(
+                                    "filename", Path(meta.get("source_file", "")).name
+                                )
+                                section = meta.get("section_heading", "")
+                                st.markdown(
+                                    f"**[{i}] {fname}**" + (f" - {section}" if section else "")
+                                )
+                                st.caption(f"score: {1 - chunk['distance']:.3f}")
+                                st.text(
+                                    chunk["text"][:500]
+                                    + ("..." if len(chunk["text"]) > 500 else "")
+                                )
+                                if i < len(chunks):
+                                    st.divider()
+
+                        st.session_state.messages.append(
+                            {
+                                "role": "assistant",
+                                "content": result["answer"],
+                                "sources": result["sources"],
+                                "chunks": chunks,
+                            }
+                        )
+
     except Exception as e:
         st.error(f"Error: {e}")
         import traceback
+
         st.code(traceback.format_exc())

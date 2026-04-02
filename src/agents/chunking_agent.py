@@ -63,7 +63,7 @@ class ChunkingAgent:
             candidate = f"{overlap_buf}\n\n{para}".strip() if overlap_buf else para
             if len(current) + len(para) + 2 > self.max_chunk_chars and current:
                 chunks.append(current.strip())
-                overlap_buf = current[-self.overlap_chars:].strip()
+                overlap_buf = current[-self.overlap_chars :].strip()
                 current = para
             else:
                 current = candidate

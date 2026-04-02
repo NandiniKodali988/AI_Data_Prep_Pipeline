@@ -38,7 +38,7 @@ class Pipeline:
         self.chunking_agent = ChunkingAgent()
         self.indexing_agent = IndexingAgent(chroma_db_path=chroma_db_path)
 
-    def run(self, input_dir: Path) -> dict:
+    def run(self, input_dir: Path) -> dict[str, int | list[str]]:
         files = [f for f in input_dir.rglob("*") if f.is_file()]
         processed, skipped, failed, total_chunks = 0, 0, 0, 0
         processed_files = []
@@ -79,7 +79,7 @@ class Pipeline:
             "files": processed_files,
         }
 
-    def process_single(self, file_path: Path) -> dict | None:
+    def process_single(self, file_path: Path) -> dict[str, str | int] | None:
         """Process and index one file. Returns {chunks, format} or None if skipped/failed."""
         fmt = self.format_agent.detect(file_path)
         if fmt == FileFormat.UNKNOWN:
@@ -116,7 +116,11 @@ class Pipeline:
             desc = self.image_agent.describe(file_path, f"a standalone image '{file_path.name}'")
             result = {
                 "markdown": f"# {file_path.stem}\n\n{desc}",
-                "metadata": {"source_file": str(file_path), "file_type": "image", "title": file_path.stem},
+                "metadata": {
+                    "source_file": str(file_path),
+                    "file_type": "image",
+                    "title": file_path.stem,
+                },
             }
         else:
             return None

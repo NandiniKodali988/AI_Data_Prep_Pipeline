@@ -37,7 +37,10 @@ class IndexingAgent:
             ).hexdigest()[:32]
 
             # chroma only accepts str/int/float/bool in metadata
-            safe_meta = {k: (str(v) if not isinstance(v, (str, int, float, bool)) else v) for k, v in meta.items()}
+            safe_meta = {
+                k: (str(v) if not isinstance(v, (str, int, float, bool)) else v)
+                for k, v in meta.items()
+            }
 
             ids.append(chunk_id)
             documents.append(text)

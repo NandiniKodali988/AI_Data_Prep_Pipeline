@@ -1,4 +1,5 @@
 """Office format agents: DocxAgent, PptxAgent, XlsxAgent."""
+
 import logging
 from pathlib import Path
 
@@ -233,11 +234,7 @@ class XlsxAgent:
         return {"markdown": "\n\n".join(parts), "metadata": metadata}
 
     def _sheet_to_markdown(self, ws) -> str:
-        rows = list(
-            ws.iter_rows(
-                max_row=_XLSX_MAX_ROWS, max_col=_XLSX_MAX_COLS, values_only=True
-            )
-        )
+        rows = list(ws.iter_rows(max_row=_XLSX_MAX_ROWS, max_col=_XLSX_MAX_COLS, values_only=True))
         # Drop trailing all-None rows
         while rows and all(v is None for v in rows[-1]):
             rows.pop()

@@ -27,16 +27,26 @@ _MAGIC = {
 
 _EXT = {
     ".pdf": FileFormat.PDF,
-    ".docx": FileFormat.DOCX, ".doc": FileFormat.DOCX,
-    ".pptx": FileFormat.PPTX, ".ppt": FileFormat.PPTX,
-    ".xlsx": FileFormat.XLSX, ".xls": FileFormat.XLSX,
-    ".md": FileFormat.MARKDOWN, ".markdown": FileFormat.MARKDOWN,
-    ".rst": FileFormat.TEXT, ".txt": FileFormat.TEXT,
+    ".docx": FileFormat.DOCX,
+    ".doc": FileFormat.DOCX,
+    ".pptx": FileFormat.PPTX,
+    ".ppt": FileFormat.PPTX,
+    ".xlsx": FileFormat.XLSX,
+    ".xls": FileFormat.XLSX,
+    ".md": FileFormat.MARKDOWN,
+    ".markdown": FileFormat.MARKDOWN,
+    ".rst": FileFormat.TEXT,
+    ".txt": FileFormat.TEXT,
     ".json": FileFormat.JSON,
-    ".yaml": FileFormat.YAML, ".yml": FileFormat.YAML,
-    ".jpg": FileFormat.IMAGE, ".jpeg": FileFormat.IMAGE,
-    ".png": FileFormat.IMAGE, ".gif": FileFormat.IMAGE,
-    ".bmp": FileFormat.IMAGE, ".tiff": FileFormat.IMAGE, ".webp": FileFormat.IMAGE,
+    ".yaml": FileFormat.YAML,
+    ".yml": FileFormat.YAML,
+    ".jpg": FileFormat.IMAGE,
+    ".jpeg": FileFormat.IMAGE,
+    ".png": FileFormat.IMAGE,
+    ".gif": FileFormat.IMAGE,
+    ".bmp": FileFormat.IMAGE,
+    ".tiff": FileFormat.IMAGE,
+    ".webp": FileFormat.IMAGE,
 }
 
 
@@ -50,6 +60,10 @@ class FormatDetectionAgent:
         for sig, fmt in _MAGIC.items():
             if header.startswith(sig):
                 # zip-based office formats need the extension to tell apart
-                return fmt if fmt is not None else _EXT.get(file_path.suffix.lower(), FileFormat.UNKNOWN)
+                return (
+                    fmt
+                    if fmt is not None
+                    else _EXT.get(file_path.suffix.lower(), FileFormat.UNKNOWN)
+                )
 
         return _EXT.get(file_path.suffix.lower(), FileFormat.UNKNOWN)

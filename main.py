@@ -1,4 +1,5 @@
 """CLI entry point for the AI Data Prep Pipeline."""
+
 import argparse
 import logging
 import sys
@@ -30,13 +31,15 @@ def main() -> None:
     parser.add_argument(
         "--chroma-db", default="./chroma_db", help="Path to ChromaDB persistent storage"
     )
+    parser.add_argument("--search", "-s", help="Run a search query against the indexed documents")
     parser.add_argument(
-        "--search", "-s", help="Run a search query against the indexed documents"
+        "--query",
+        "-q",
+        help="Ask a question — retrieves relevant chunks and generates a grounded answer",
     )
     parser.add_argument(
-        "--query", "-q", help="Ask a question — retrieves relevant chunks and generates a grounded answer"
+        "--top-k", type=int, default=5, help="Number of results for --search / --query"
     )
-    parser.add_argument("--top-k", type=int, default=5, help="Number of results for --search / --query")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
@@ -64,6 +67,7 @@ def main() -> None:
     if args.search:
         # Search-only mode — skip processing
         from src.agents.indexing_agent import IndexingAgent
+
         agent = IndexingAgent(chroma_db_path=args.chroma_db)
         results = agent.search(args.search, top_k=args.top_k)
         if not results:

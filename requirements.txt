@@ -28,3 +28,6 @@ python-dotenv>=1.0.0
 # Streamlit UI
 streamlit>=1.35.0
 
+# Dev tools
+ruff>=0.4.0
+
