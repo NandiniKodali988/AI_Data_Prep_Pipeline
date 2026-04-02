@@ -13,7 +13,6 @@ COPY requirements.txt ./
 RUN pip3 install -r requirements.txt
 
 COPY src/ ./src/
-COPY chroma_db/ ./chroma_db/
 COPY streamlit_app.py ./
 COPY main.py ./
 
