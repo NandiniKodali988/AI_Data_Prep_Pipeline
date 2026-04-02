@@ -38,7 +38,7 @@ document > format detection > content extraction > chunking > ChromaDB > chat Q&
 
 ```bash
 git clone <repo-url>
-cd AI_Data_Prep_Piepline
+cd AI_Data_Prep_Pipeline
 
 pip install -r requirements.txt
 
@@ -101,23 +101,32 @@ python eval/evaluate.py --top-k 5
 ```
 src/
   agents/
-    format_detection_agent.py
-    pdf_agent.py
-    office_agent.py        # DocxAgent, PptxAgent, XlsxAgent
-    image_processing_agent.py
-    chunking_agent.py
-    indexing_agent.py
-    rag_agent.py
-    metadata_agent.py
-    text_agent.py
-    structured_data_agent.py
-  pipeline.py
-streamlit_app.py           # Streamlit UI
-main.py                    # CLI
+    format_detection_agent.py  # magic bytes + extension fallback
+    pdf_agent.py               # PyMuPDF text + pdfplumber tables + images
+    office_agent.py            # DocxAgent, PptxAgent, XlsxAgent
+    image_processing_agent.py  # Claude Vision descriptions
+    chunking_agent.py          # heading and paragraph splits with overlap
+    indexing_agent.py          # ChromaDB upsert and search
+    rag_agent.py               # multi-turn Q&A and summarization
+    metadata_agent.py          # normalizes metadata across formats
+    text_agent.py              # plain text and Markdown passthrough
+    structured_data_agent.py   # JSON and YAML to Markdown
+  pipeline.py                  # orchestrator
+streamlit_app.py               # browser UI (Upload + Chat tabs)
+main.py                        # CLI
 eval/
-  evaluate.py
-  eval_set.yaml
-tests/                     # 58 tests, all passing
+  evaluate.py                  # Recall@k, Precision@k, MRR
+  eval_set.yaml                # 26 questions across 4 documents
+tests/                         # 58 tests, all passing
+  test_format_detection.py
+  test_text_agent.py
+  test_chunking_agent.py
+  test_indexing_agent.py
+  test_office_agent.py
+  test_rag_agent.py
+pyproject.toml                 # ruff config and pytest settings
+packages.txt                   # HuggingFace system dependencies
+Dockerfile                     # HuggingFace Spaces deployment
 ```
 
 ## Stack
