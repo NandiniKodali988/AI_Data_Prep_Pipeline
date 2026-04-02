@@ -98,3 +98,65 @@ class TestRAGAgent:
         result = agent.answer("question", [])
         assert result["chunks_used"] == 0
         agent.client.messages.create.assert_called_once()
+
+    def test_history_prepended_to_messages(self, agent):
+        agent.client.messages.create.return_value = mock_response("Follow-up answer.")
+        chunks = [make_chunk("Some content.", "doc.pdf")]
+        history = [
+            {"role": "user", "content": "What is RAG?"},
+            {"role": "assistant", "content": "RAG stands for retrieval-augmented generation [1]."},
+        ]
+        agent.answer("Can you elaborate?", chunks, history=history)
+
+        call_args = agent.client.messages.create.call_args
+        messages = call_args.kwargs["messages"]
+        # history turns come first, then the new user message with context
+        assert messages[0] == history[0]
+        assert messages[1] == history[1]
+        assert messages[2]["role"] == "user"
+        assert "Can you elaborate?" in messages[2]["content"]
+
+    def test_no_history_sends_single_message(self, agent):
+        agent.client.messages.create.return_value = mock_response("Answer.")
+        chunks = [make_chunk("Content.", "doc.pdf")]
+        agent.answer("question", chunks, history=None)
+
+        call_args = agent.client.messages.create.call_args
+        messages = call_args.kwargs["messages"]
+        assert len(messages) == 1
+        assert messages[0]["role"] == "user"
+
+    def test_history_not_mutated(self, agent):
+        # answer() should not modify the list passed in as history
+        agent.client.messages.create.return_value = mock_response("ok")
+        chunks = [make_chunk("Content.", "doc.pdf")]
+        history = [{"role": "user", "content": "previous question"}]
+        original_len = len(history)
+        agent.answer("follow-up", chunks, history=history)
+        assert len(history) == original_len
+
+
+class TestSummarize:
+    def test_summarize_returns_string(self, agent):
+        agent.client.messages.create.return_value = mock_response("- Point one\n- Point two")
+        result = agent.summarize("Some document content.", "report.pdf")
+        assert isinstance(result, str)
+        assert "Point one" in result
+
+    def test_summarize_includes_filename_in_prompt(self, agent):
+        agent.client.messages.create.return_value = mock_response("Summary.")
+        agent.summarize("Content.", "my_report.pdf")
+
+        call_args = agent.client.messages.create.call_args
+        prompt = call_args.kwargs["messages"][0]["content"]
+        assert "my_report.pdf" in prompt
+
+    def test_summarize_truncates_long_content(self, agent):
+        agent.client.messages.create.return_value = mock_response("Summary.")
+        long_content = "x" * 10000
+        agent.summarize(long_content, "big.pdf")
+
+        call_args = agent.client.messages.create.call_args
+        prompt = call_args.kwargs["messages"][0]["content"]
+        # the 10000-char content should be capped before being sent
+        assert len(prompt) < 10000
