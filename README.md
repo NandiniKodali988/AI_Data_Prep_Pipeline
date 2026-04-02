@@ -10,14 +10,16 @@ pinned: false
 
 # DocPipe
 
-A local RAG pipeline that ingests documents in various formats, converts them to clean Markdown, indexes the content into ChromaDB, and lets you ask questions against the full corpus. Images and diagrams get described by Claude Vision so they're searchable too.
+**[HuggingFace Space](https://huggingface.co/spaces/NandiniKodali/docpipe)**
+
+A local RAG pipeline that ingests documents in various formats, converts them to clean Markdown, indexes the content into ChromaDB, and lets you have a multi-turn conversation against the full corpus. Images and diagrams get described by Claude Vision so they are searchable too.
 
 ## What it does
 
-Drop a folder of PDFs, Word docs, PowerPoints, spreadsheets, or plain text files into the pipeline. It extracts the content, chunks it intelligently, and stores it in a local vector database. Then you can ask natural language questions and get grounded answers with citations pointing back to the source documents.
+Drop a file into the Upload tab. DocPipe extracts the content, chunks it, stores it in a local vector database, and generates a summary so you know what was indexed. Then switch to the Chat tab and ask questions — follow-up questions work because the full conversation history is passed back to Claude on each turn.
 
 ```
-document > format detection > content extraction > chunking > ChromaDB > RAG Q&A
+document > format detection > content extraction > chunking > ChromaDB > chat Q&A
 ```
 
 ## Supported formats
@@ -49,10 +51,10 @@ cp .env.example .env
 **Streamlit app (recommended)**
 
 ```bash
-streamlit run app.py
+streamlit run streamlit_app.py
 ```
 
-Upload files through the browser, then switch to the Ask tab to query them.
+Upload a file in the Upload tab — a summary appears automatically after indexing. Switch to the Chat tab to ask questions. Use the "Clear conversation" button in the sidebar to start a new session.
 
 **CLI**
 
@@ -60,7 +62,7 @@ Upload files through the browser, then switch to the Ask tab to query them.
 # index a folder of documents
 python main.py --input ./data --output ./output
 
-# ask a question (retrieves chunks + generates a cited answer)
+# ask a question (retrieves chunks and generates a cited answer)
 python main.py --query "What is chain-of-thought prompting?"
 
 # raw semantic search (returns chunks without generation)
@@ -74,9 +76,9 @@ Each file goes through a chain of agents:
 - **FormatDetectionAgent**: magic bytes first, extension as fallback for zip-based formats (docx/pptx/xlsx all share the same header)
 - **PDFAgent / DocxAgent / PptxAgent / XlsxAgent**: format-specific extraction
 - **ImageProcessingAgent**: sends embedded images to Claude Vision and gets back a searchable description
-- **ChunkingAgent**: splits on headings first, then paragraphs, with a small overlap window so answers that straddle chunk boundaries don't get missed
-- **IndexingAgent**: upserts into ChromaDB using a SHA256 ID derived from filename + chunk index, so re-indexing is safe
-- **RAGAgent**: formats retrieved chunks as numbered context, sends to Claude with a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
+- **ChunkingAgent**: splits on headings first, then paragraphs, with a small overlap window so answers that straddle chunk boundaries do not get missed
+- **IndexingAgent**: upserts into ChromaDB using a SHA256 ID derived from filename and chunk index, so re-indexing is safe
+- **RAGAgent**: formats retrieved chunks as numbered context, sends to Claude with the full conversation history and a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
 
 ## Evaluation
 
@@ -110,17 +112,17 @@ src/
     text_agent.py
     structured_data_agent.py
   pipeline.py
-app.py                     # Streamlit UI
+streamlit_app.py           # Streamlit UI
 main.py                    # CLI
 eval/
   evaluate.py
   eval_set.yaml
-tests/                     # 45 tests, all passing
+tests/                     # 58 tests, all passing
 ```
 
 ## Stack
 
-- Claude (`claude-sonnet-4-6`) — Vision + RAG generation
+- Claude (`claude-sonnet-4-6`) — Vision, summarization, and chat Q&A
 - ChromaDB — local persistent vector store
 - PyMuPDF + pdfplumber — PDF text and table extraction
 - python-docx / python-pptx / openpyxl — Office format parsing
