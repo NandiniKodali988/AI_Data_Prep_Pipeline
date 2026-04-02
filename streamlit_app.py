@@ -53,6 +53,10 @@ def get_index():
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# last upload summary persists across the rerun that updates the sidebar chunk count
+if "last_summary" not in st.session_state:
+    st.session_state.last_summary = None
+
 
 with st.sidebar:
     st.header("DocPipe")
@@ -95,6 +99,13 @@ with tab_upload:
         label_visibility="collapsed",
     )
 
+    if st.session_state.last_summary:
+        s = st.session_state.last_summary
+        st.success(f"{s['filename']} indexed")
+        st.markdown("**Summary**")
+        st.markdown(s["text"])
+        st.divider()
+
     if uploaded:
         st.caption(f"{uploaded.name} — {len(uploaded.getvalue()) / 1024:.1f} KB")
 
@@ -112,18 +123,19 @@ with tab_upload:
                         else:
                             st.success(f"{uploaded.name} indexed ({result['chunks']} chunks)")
 
-                            # summarize the document right after indexing so the user
-                            # gets an immediate sense of what was just added
+                            # summarize and stash in session state before rerun so
+                            # it survives the page refresh that updates the sidebar
                             out_md = Path("./output") / (Path(uploaded.name).stem + ".md")
                             if out_md.exists():
                                 with st.spinner("Summarizing..."):
                                     try:
                                         rag = get_rag()
-                                        summary = rag.summarize(
-                                            out_md.read_text(encoding="utf-8"), uploaded.name
-                                        )
-                                        st.markdown("**Summary**")
-                                        st.markdown(summary)
+                                        st.session_state.last_summary = {
+                                            "filename": uploaded.name,
+                                            "text": rag.summarize(
+                                                out_md.read_text(encoding="utf-8"), uploaded.name
+                                            ),
+                                        }
                                     except Exception:
                                         pass  # summary is best-effort; don't block on API errors
 
