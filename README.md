@@ -125,7 +125,6 @@ tests/                         # 58 tests, all passing
   test_office_agent.py
   test_rag_agent.py
 pyproject.toml                 # ruff config and pytest settings
-packages.txt                   # HuggingFace system dependencies
 Dockerfile                     # HuggingFace Spaces deployment
 ```
 
