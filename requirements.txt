@@ -17,7 +17,7 @@ python-magic>=0.4.27
 chromadb>=0.5.0
 
 # Hybrid retrieval
-rank-bm25>=0.3.1
+rank-bm25>=0.2.2
 
 # Image handling
 Pillow>=10.0.0
