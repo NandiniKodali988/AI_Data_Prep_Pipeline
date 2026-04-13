@@ -70,7 +70,9 @@ with st.sidebar:
         if total_chunks > 0:
             raw = index_agent.collection.get(include=["metadatas"])
             filenames = sorted(
-                set(m.get("filename", Path(m.get("source_file", "")).name) for m in raw["metadatas"])
+                set(
+                    m.get("filename", Path(m.get("source_file", "")).name) for m in raw["metadatas"]
+                )
             )
             st.caption(f"{len(filenames)} document(s)")
             for fname in filenames:
@@ -170,7 +172,9 @@ with tab_chat:
                                     st.markdown(
                                         f"**[{i}] {fname}**" + (f" - {section}" if section else "")
                                     )
-                                    st.caption(f"score: {1 - chunk['distance']:.3f}")
+                                    st.caption(
+                                        f"score: {chunk.get('score', 1 - chunk.get('distance', 0)):.3f}"
+                                    )
                                     st.text(
                                         chunk["text"][:500]
                                         + ("..." if len(chunk["text"]) > 500 else "")
@@ -182,8 +186,7 @@ with tab_chat:
             # include the current question in the context we pass to Claude
             if prompt := st.chat_input("Ask a question about your documents"):
                 history = [
-                    {"role": m["role"], "content": m["content"]}
-                    for m in st.session_state.messages
+                    {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
                 ]
                 st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -191,11 +194,17 @@ with tab_chat:
                     st.markdown(prompt)
 
                 with st.chat_message("assistant"):
-                    with st.spinner("Thinking..."):
-                        chunks = index_agent.search(prompt, top_k=top_k)
+                    rag = get_rag()
+                    with st.spinner("Rewriting query..."):
+                        search_query = rag.rewrite_query(prompt, history)
+
+                    with st.spinner("Searching..."):
+                        chunks = index_agent.search(search_query, top_k=top_k)
 
                     if not chunks:
-                        response_text = "I couldn't find anything relevant in the indexed documents."
+                        response_text = (
+                            "I couldn't find anything relevant in the indexed documents."
+                        )
                         st.markdown(response_text)
                         st.session_state.messages.append(
                             {
@@ -206,7 +215,6 @@ with tab_chat:
                             }
                         )
                     else:
-                        rag = get_rag()
                         result = rag.answer(prompt, chunks, history=history)
                         st.markdown(result["answer"])
                         st.caption(f"Sources: {', '.join(result['sources'])}")
@@ -214,14 +222,12 @@ with tab_chat:
                         with st.expander("Show sources"):
                             for i, chunk in enumerate(chunks, 1):
                                 meta = chunk["metadata"]
-                                fname = meta.get(
-                                    "filename", Path(meta.get("source_file", "")).name
-                                )
+                                fname = meta.get("filename", Path(meta.get("source_file", "")).name)
                                 section = meta.get("section_heading", "")
                                 st.markdown(
                                     f"**[{i}] {fname}**" + (f" - {section}" if section else "")
                                 )
-                                st.caption(f"score: {1 - chunk['distance']:.3f}")
+                                st.caption(f"score: {chunk.get('score', 1 - chunk.get('distance', 0)):.3f}")
                                 st.text(
                                     chunk["text"][:500]
                                     + ("..." if len(chunk["text"]) > 500 else "")

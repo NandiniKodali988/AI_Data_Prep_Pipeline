@@ -77,20 +77,22 @@ Each file goes through a chain of agents:
 - **PDFAgent / DocxAgent / PptxAgent / XlsxAgent**: format-specific extraction
 - **ImageProcessingAgent**: sends embedded images to Claude Vision and gets back a searchable description
 - **ChunkingAgent**: splits on headings first, then paragraphs, with a small overlap window so answers that straddle chunk boundaries do not get missed
-- **IndexingAgent**: upserts into ChromaDB using a SHA256 ID derived from filename and chunk index, so re-indexing is safe
-- **RAGAgent**: formats retrieved chunks as numbered context, sends to Claude with the full conversation history and a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
+- **IndexingAgent**: upserts into ChromaDB using a SHA256 ID derived from filename and chunk index, so re-indexing is safe; search uses hybrid retrieval — BM25 keyword scores and ChromaDB semantic scores are combined with Reciprocal Rank Fusion (RRF)
+- **RAGAgent**: rewrites the user's question into a keyword-rich search query (resolving pronouns and references to prior answers from conversation history) before retrieval; formats retrieved chunks as numbered context, sends to Claude with the full conversation history and a strict grounding prompt, returns the answer with inline `[1]`, `[2]` citations
 
 ## Evaluation
 
-Evaluated against a 26-question set across 4 documents (2 PDFs, 1 research paper, 1 PPTX):
+Evaluated against a 26-question set across 4 documents (2 PDFs, 1 research paper, 1 PPTX).
 
-| Metric | Score |
-|--------|-------|
-| Recall@1 | 84.6% |
-| Recall@3 | 88.5% |
-| Recall@5 | 92.3% |
-| Precision@3 | 0.782 |
-| MRR | 0.867 |
+Baseline used naive semantic search. Hybrid retrieval (BM25 + semantic search with Reciprocal Rank Fusion) and query rewriting were added iteratively, with eval run after each change.
+
+| Metric | Baseline | Hybrid + Query Rewriting |
+|--------|----------|--------------------------|
+| Recall@1 | 84.6% | 96.2% |
+| Recall@3 | 88.5% | 96.2% |
+| Recall@5 | 92.3% | 96.2% |
+| Precision@3 | 0.782 | 0.833 |
+| MRR | 0.867 | 0.962 |
 
 ```bash
 python eval/evaluate.py --top-k 5
@@ -132,6 +134,7 @@ Dockerfile                     # HuggingFace Spaces deployment
 
 - Claude (`claude-sonnet-4-6`) — Vision, summarization, and chat Q&A
 - ChromaDB — local persistent vector store
+- rank-bm25 — BM25Okapi keyword index for hybrid retrieval
 - PyMuPDF + pdfplumber — PDF text and table extraction
 - python-docx / python-pptx / openpyxl — Office format parsing
 - Streamlit — UI

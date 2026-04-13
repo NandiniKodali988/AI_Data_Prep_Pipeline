@@ -81,6 +81,40 @@ class RAGAgent:
         logger.debug("RAG answer generated using %d chunks from %s", len(chunks), sources)
         return {"answer": answer_text, "sources": sources, "chunks_used": len(chunks)}
 
+    def rewrite_query(self, question: str, history: list[dict] | None = None) -> str:
+        """Rewrite the user's question into a keyword-rich search query.
+
+        Resolves coreferences from conversation history so follow-up questions
+        like "tell me more about that" retrieve the right chunks.
+        """
+        if not history:
+            prompt = (
+                "Rewrite the following question as a concise, keyword-rich search query "
+                "optimized for retrieving relevant document chunks from a vector database. "
+                "Return only the rewritten query, no explanation.\n\n"
+                f"Question: {question}"
+            )
+        else:
+            # include recent turns so pronouns and references can be resolved
+            recent = history[-4:]
+            convo = "\n".join(f"{m['role'].capitalize()}: {m['content'][:200]}" for m in recent)
+            prompt = (
+                "Given the conversation below, rewrite the latest question as a standalone, "
+                "keyword-rich search query that resolves any pronouns or references to prior answers. "
+                "Return only the rewritten query, no explanation.\n\n"
+                f"Conversation:\n{convo}\n\n"
+                f"Latest question: {question}"
+            )
+
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=100,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        rewritten = response.content[0].text.strip()
+        logger.debug("query rewritten: %r -> %r", question, rewritten)
+        return rewritten
+
     def summarize(self, markdown: str, filename: str) -> str:
         """Return a short bullet-point summary of a document's content."""
         # cap at 4000 chars so we don't blow the token budget on large docs
